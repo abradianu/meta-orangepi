@@ -1,0 +1,525 @@
+From 1985306c25d2b329e986ab8012b6070912a7d308 Mon Sep 17 00:00:00 2001
+From: Adrian Bradianu <abradianu@gmail.com>
+Date: Thu, 23 Jun 2016 19:38:37 +0300
+Subject: [PATCH 2/3] wireless: realtek: rtl8189fs: Update for kernel 4.7
+
+Signed-off-by: Adrian Bradianu <abradianu@gmail.com>
+---
+ drivers/net/wireless/realtek/Kconfig               |  1 +
+ drivers/net/wireless/realtek/Makefile              |  1 +
+ .../net/wireless/realtek/rtl8189fs/hal/hal_com.c   |  2 +-
+ .../realtek/rtl8189fs/hal/hal_com_phycfg.c         | 46 +++++++++---------
+ .../wireless/realtek/rtl8189fs/include/hal_com.h   |  2 +-
+ .../wireless/realtek/rtl8189fs/include/rtw_debug.h |  4 +-
+ .../rtl8189fs/os_dep/linux/ioctl_cfg80211.c        | 54 +++++++++++-----------
+ .../realtek/rtl8189fs/os_dep/linux/wifi_regd.c     | 14 +++---
+ .../rtl8189fs/platform/platform_ARM_SUNnI_sdio.c   | 51 --------------------
+ 9 files changed, 63 insertions(+), 112 deletions(-)
+
+diff --git a/drivers/net/wireless/realtek/Kconfig b/drivers/net/wireless/realtek/Kconfig
+index 8a8ba20..6246e92 100644
+--- a/drivers/net/wireless/realtek/Kconfig
++++ b/drivers/net/wireless/realtek/Kconfig
+@@ -14,5 +14,6 @@ if WLAN_VENDOR_REALTEK
+ source "drivers/net/wireless/realtek/rtl818x/Kconfig"
+ source "drivers/net/wireless/realtek/rtlwifi/Kconfig"
+ source "drivers/net/wireless/realtek/rtl8xxxu/Kconfig"
++source "drivers/net/wireless/realtek/rtl8189fs/Kconfig"
+ 
+ endif # WLAN_VENDOR_REALTEK
+diff --git a/drivers/net/wireless/realtek/Makefile b/drivers/net/wireless/realtek/Makefile
+index 9c78deb..07bcdbe 100644
+--- a/drivers/net/wireless/realtek/Makefile
++++ b/drivers/net/wireless/realtek/Makefile
+@@ -6,4 +6,5 @@ obj-$(CONFIG_RTL8180)		+= rtl818x/
+ obj-$(CONFIG_RTL8187)		+= rtl818x/
+ obj-$(CONFIG_RTLWIFI)		+= rtlwifi/
+ obj-$(CONFIG_RTL8XXXU)		+= rtl8xxxu/
++obj-$(CONFIG_RTL8189FS)		+= rtl8189fs/
+ 
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com.c b/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com.c
+index e3a9853..e94a048 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com.c
++++ b/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com.c
+@@ -27,7 +27,7 @@
+ //#define CONFIG_GTK_OL_DBG
+ 
+ #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
+-char	file_path[PATH_LENGTH_MAX];
++char	rtw_file_path[PATH_LENGTH_MAX];
+ #endif
+ 
+ void dump_chip_info(HAL_VERSION	ChipVersion)
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com_phycfg.c b/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com_phycfg.c
+index 70f96d9..4f72935 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com_phycfg.c
++++ b/drivers/net/wireless/realtek/rtl8189fs/hal/hal_com_phycfg.c
+@@ -2920,8 +2920,8 @@ int rtw_is_phy_file_readable(const char *hal_file_name)
+ {
+ #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
+ 	if (hal_file_name) {
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, hal_file_name);
+-		return rtw_is_file_readable(file_path);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, hal_file_name);
++		return rtw_is_file_readable(rtw_file_path);
+ 	}
+ #endif
+ 	return _FALSE;
+@@ -2946,11 +2946,11 @@ phy_ConfigMACWithParaFile(
+ 
+ 	if ((pHalData->mac_reg_len == 0) && (pHalData->mac_reg == NULL))
+ 	{
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -3045,11 +3045,11 @@ phy_ConfigBBWithParaFile(
+ 
+ 	if ((pBufLen != NULL) && (*pBufLen == 0) && (pBuf == NULL))
+ 	{
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -3497,11 +3497,11 @@ phy_ConfigBBWithPgParaFile(
+ 	_rtw_memset(pHalData->para_file_buf, 0, MAX_PARA_FILE_BUF_LEN);
+ 
+ 	if (pHalData->bb_phy_reg_pg == NULL) {
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -3558,11 +3558,11 @@ phy_ConfigBBWithMpParaFile(
+ 
+ 	if ((pHalData->bb_phy_reg_mp_len == 0) && (pHalData->bb_phy_reg_mp == NULL))
+ 	{
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -3694,11 +3694,11 @@ PHY_ConfigRFWithParaFile(
+ 
+ 	if ((pBufLen != NULL) && (*pBufLen == 0) && (pBuf == NULL))
+ 	{
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -3972,11 +3972,11 @@ PHY_ConfigRFWithTxPwrTrackParaFile(
+ 
+ 	if ((pHalData->rf_tx_pwr_track_len == 0) && (pHalData->rf_tx_pwr_track == NULL))
+ 	{
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+@@ -4344,11 +4344,11 @@ PHY_ConfigRFWithPowerLimitTableParaFile(
+ 	_rtw_memset(pHalData->para_file_buf, 0, MAX_PARA_FILE_BUF_LEN);
+ 
+ 	if (pHalData->rf_tx_pwr_lmt == NULL) {
+-		rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
++		rtw_merge_string(rtw_file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
+ 	
+-		if (rtw_is_file_readable(file_path) == _TRUE)
++		if (rtw_is_file_readable(rtw_file_path) == _TRUE)
+ 		{
+-			rlen = rtw_retrieve_from_file(file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
++			rlen = rtw_retrieve_from_file(rtw_file_path, pHalData->para_file_buf, MAX_PARA_FILE_BUF_LEN);
+ 			if (rlen > 0)
+ 			{
+ 				rtStatus = _SUCCESS;
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/include/hal_com.h b/drivers/net/wireless/realtek/rtl8189fs/include/hal_com.h
+index 9cee4a8..fc59350 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/include/hal_com.h
++++ b/drivers/net/wireless/realtek/rtl8189fs/include/hal_com.h
+@@ -512,7 +512,7 @@ static inline u32 rtw_phydm_ability_get(_adapter *adapter)
+ 
+ #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
+ extern char *rtw_phy_file_path;
+-extern char file_path[PATH_LENGTH_MAX];
++extern char rtw_file_path[PATH_LENGTH_MAX];
+ #define GetLineFromBuffer(buffer)   strsep(&buffer, "\r\n")
+ #endif
+ 
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/include/rtw_debug.h b/drivers/net/wireless/realtek/rtl8189fs/include/rtw_debug.h
+index 50ce08f..77ce753 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/include/rtw_debug.h
++++ b/drivers/net/wireless/realtek/rtl8189fs/include/rtw_debug.h
+@@ -229,7 +229,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
+ 		if (sel == RTW_DBGDUMP)\
+ 			_DBG_871X_LEVEL(_drv_always_, fmt, ##arg); \
+ 		else {\
+-			if(_seqdump(sel, fmt, ##arg)) /*rtw_warn_on(1)*/; \
++			_seqdump(sel, fmt, ##arg); \
+ 		} \
+ 	}while(0)
+ 
+@@ -239,7 +239,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
+ 		if (sel == RTW_DBGDUMP)\
+ 			DBG_871X_LEVEL(_drv_always_, fmt, ##arg); \
+ 		else {\
+-			if(_seqdump(sel, fmt, ##arg)) /*rtw_warn_on(1)*/; \
++			_seqdump(sel, fmt, ##arg); \
+ 		} \
+ 	}while(0)
+ 
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/ioctl_cfg80211.c b/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/ioctl_cfg80211.c
+index 48d680c..8bcc041 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/ioctl_cfg80211.c
++++ b/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/ioctl_cfg80211.c
+@@ -89,7 +89,7 @@ static const u32 rtw_cipher_suites[] = {
+ 	}
+ 
+ #define CHAN2G(_channel, _freq, _flags) {			\
+-	.band			= IEEE80211_BAND_2GHZ,		\
++	.band			= NL80211_BAND_2GHZ,		\
+ 	.center_freq		= (_freq),			\
+ 	.hw_value		= (_channel),			\
+ 	.flags			= (_flags),			\
+@@ -98,7 +98,7 @@ static const u32 rtw_cipher_suites[] = {
+ }
+ 
+ #define CHAN5G(_channel, _flags) {				\
+-	.band			= IEEE80211_BAND_5GHZ,		\
++	.band			= NL80211_BAND_5GHZ,		\
+ 	.center_freq		= 5000 + (5 * (_channel)),	\
+ 	.hw_value		= (_channel),			\
+ 	.flags			= (_flags),			\
+@@ -215,18 +215,18 @@ void rtw_5g_rates_init(struct ieee80211_rate *rates)
+ }
+ 
+ struct ieee80211_supported_band *rtw_spt_band_alloc(
+-	enum ieee80211_band band
++	enum nl80211_band band
+ 	)
+ {
+ 	struct ieee80211_supported_band *spt_band = NULL;
+ 	int n_channels, n_bitrates;
+ 
+-	if(band == IEEE80211_BAND_2GHZ)
++	if(band == NL80211_BAND_2GHZ)
+ 	{
+ 		n_channels = RTW_2G_CHANNELS_NUM;
+ 		n_bitrates = RTW_G_RATES_NUM;
+ 	}
+-	else if(band == IEEE80211_BAND_5GHZ)
++	else if(band == NL80211_BAND_5GHZ)
+ 	{
+ 		n_channels = RTW_5G_CHANNELS_NUM;
+ 		n_bitrates = RTW_A_RATES_NUM;
+@@ -250,12 +250,12 @@ struct ieee80211_supported_band *rtw_spt_band_alloc(
+ 	spt_band->n_channels = n_channels;
+ 	spt_band->n_bitrates = n_bitrates;
+ 
+-	if(band == IEEE80211_BAND_2GHZ)
++	if(band == NL80211_BAND_2GHZ)
+ 	{
+ 		rtw_2g_channels_init(spt_band->channels);
+ 		rtw_2g_rates_init(spt_band->bitrates);
+ 	}
+-	else if(band == IEEE80211_BAND_5GHZ)
++	else if(band == NL80211_BAND_5GHZ)
+ 	{
+ 		rtw_5g_channels_init(spt_band->channels);
+ 		rtw_5g_rates_init(spt_band->bitrates);
+@@ -275,13 +275,13 @@ void rtw_spt_band_free(struct ieee80211_supported_band *spt_band)
+ 	if(!spt_band)
+ 		return;
+ 	
+-	if(spt_band->band == IEEE80211_BAND_2GHZ)
++	if(spt_band->band == NL80211_BAND_2GHZ)
+ 	{
+ 		size = sizeof(struct ieee80211_supported_band)
+ 			+ sizeof(struct ieee80211_channel)*RTW_2G_CHANNELS_NUM
+ 			+ sizeof(struct ieee80211_rate)*RTW_G_RATES_NUM;
+ 	}
+-	else if(spt_band->band == IEEE80211_BAND_5GHZ)
++	else if(spt_band->band == NL80211_BAND_5GHZ)
+ 	{
+ 		size = sizeof(struct ieee80211_supported_band)
+ 			+ sizeof(struct ieee80211_channel)*RTW_5G_CHANNELS_NUM
+@@ -878,7 +878,7 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
+ 			cfg80211_connect_result(padapter->pnetdev, NULL, NULL, 0, NULL, 0, 
+ 				WLAN_STATUS_UNSPECIFIED_FAILURE, GFP_ATOMIC/*GFP_KERNEL*/);
+ 		else if(pwdev->sme_state==CFG80211_SME_CONNECTED)
+-			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
++			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, false, GFP_ATOMIC);
+ 		//else
+ 			//DBG_8192C("pwdev->sme_state=%d\n", pwdev->sme_state);
+ 
+@@ -887,7 +887,7 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
+ 
+ 		if (check_fwstate(&padapter->mlmepriv, _FW_LINKED)) {
+ 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_disconnected\n", FUNC_ADPT_ARG(padapter));
+-			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
++			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, false, GFP_ATOMIC);
+ 		} else {
+ 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_connect_result\n", FUNC_ADPT_ARG(padapter));
+ 			cfg80211_connect_result(padapter->pnetdev, NULL, NULL, 0, NULL, 0, 
+@@ -6256,7 +6256,7 @@ int rtw_cfg80211_set_mgnt_wpsp2pie(struct net_device *net, char *buf, int len,
+ 	
+ }
+ 
+-static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
++static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum nl80211_band band, u8 rf_type)
+ {
+ 	struct registry_priv *pregistrypriv = &padapter->registrypriv;
+ 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
+@@ -6276,9 +6276,9 @@ static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_s
+ 	/* RX STBC */
+ 	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_RX)) {
+ 		/*rtw_rx_stbc 0: disable, bit(0):enable 2.4g, bit(1):enable 5g*/
+-		if (IEEE80211_BAND_2GHZ == band)
++		if (NL80211_BAND_2GHZ == band)
+ 			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(0))?_TRUE:_FALSE;
+-		if (IEEE80211_BAND_5GHZ == band)
++		if (NL80211_BAND_5GHZ == band)
+ 			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(1))?_TRUE:_FALSE;
+ 
+ 		if (stbc_rx_enable) {
+@@ -6304,7 +6304,7 @@ static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_s
+ 	}
+ }
+ 
+-static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
++static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum nl80211_band band, u8 rf_type)
+ {
+ #define MAX_BIT_RATE_40MHZ_MCS23	450	/* Mbps */
+ #define MAX_BIT_RATE_40MHZ_MCS15	300	/* Mbps */
+@@ -6329,7 +6329,7 @@ static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_
+ 	ht_cap->mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
+ 
+ 	/*
+-	 *hw->wiphy->bands[IEEE80211_BAND_2GHZ]
++	 *hw->wiphy->bands[NL80211_BAND_2GHZ]
+ 	 *base on ant_num
+ 	 *rx_mask: RX mask
+ 	 *if rx_ant =1 rx_mask[0]=0xff;==>MCS0-MCS7
+@@ -6372,9 +6372,9 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
+ 	DBG_8192C("%s:rf_type=%d\n", __func__, rf_type);
+ 
+ 	if (IsSupported24G(padapter->registrypriv.wireless_mode)) {	
+-		bands = wiphy->bands[IEEE80211_BAND_2GHZ];
++		bands = wiphy->bands[NL80211_BAND_2GHZ];
+ 		if(bands)
+-			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_2GHZ, rf_type);
++			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, NL80211_BAND_2GHZ, rf_type);
+ 	}
+ #ifdef CONFIG_IEEE80211_BAND_5GHZ
+ 	if (IsSupported5G(padapter->registrypriv.wireless_mode)) {	
+@@ -6468,11 +6468,11 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
+ 	wiphy->n_cipher_suites = ARRAY_SIZE(rtw_cipher_suites);
+ 
+ 	if (IsSupported24G(adapter->registrypriv.wireless_mode))
+-		wiphy->bands[IEEE80211_BAND_2GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_2GHZ);
++		wiphy->bands[NL80211_BAND_2GHZ] = rtw_spt_band_alloc(NL80211_BAND_2GHZ);
+ 
+ #ifdef CONFIG_IEEE80211_BAND_5GHZ
+ 	if (IsSupported5G(adapter->registrypriv.wireless_mode))
+-		wiphy->bands[IEEE80211_BAND_5GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_5GHZ);
++		wiphy->bands[NL80211_BAND_5GHZ] = rtw_spt_band_alloc(NL80211_BAND_5GHZ);
+ #endif
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38) && LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
+@@ -6624,13 +6624,13 @@ void rtw_wiphy_free(struct wiphy *wiphy)
+ 
+ 	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
+ 
+-	if (wiphy->bands[IEEE80211_BAND_2GHZ]) {
+-		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_2GHZ]);
+-		wiphy->bands[IEEE80211_BAND_2GHZ] = NULL;
++	if (wiphy->bands[NL80211_BAND_2GHZ]) {
++		rtw_spt_band_free(wiphy->bands[NL80211_BAND_2GHZ]);
++		wiphy->bands[NL80211_BAND_2GHZ] = NULL;
+ 	}
+-	if (wiphy->bands[IEEE80211_BAND_5GHZ]) {
+-		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_5GHZ]);
+-		wiphy->bands[IEEE80211_BAND_5GHZ] = NULL;
++	if (wiphy->bands[NL80211_BAND_5GHZ]) {
++		rtw_spt_band_free(wiphy->bands[NL80211_BAND_5GHZ]);
++		wiphy->bands[NL80211_BAND_5GHZ] = NULL;
+ 	}
+ 
+ 	wiphy_free(wiphy);
+@@ -6746,7 +6746,7 @@ void rtw_wdev_unregister(struct wireless_dev *wdev)
+ 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) || defined(COMPAT_KERNEL_RELEASE)	
+ 	if (wdev->current_bss) {
+ 		DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n", FUNC_ADPT_ARG(adapter));
+-		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
++		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, false, GFP_ATOMIC);
+ 	}
+ 	#endif
+ 
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/wifi_regd.c b/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/wifi_regd.c
+index 154a28f..838f982 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/wifi_regd.c
++++ b/drivers/net/wireless/realtek/rtl8189fs/os_dep/linux/wifi_regd.c
+@@ -151,7 +151,7 @@ static void _rtw_reg_apply_beaconing_flags(struct wiphy *wiphy,
+ 	u32 bandwidth = 0;
+ 	int r;
+ 
+-	for (band = 0; band < IEEE80211_NUM_BANDS; band++) {
++	for (band = 0; band < NUM_NL80211_BANDS; band++) {
+ 
+ 		if (!wiphy->bands[band])
+ 			continue;
+@@ -205,9 +205,9 @@ static void _rtw_reg_apply_active_scan_flags(struct wiphy *wiphy,
+ 	u32 bandwidth = 0;
+ 	int r;
+ 
+-	if (!wiphy->bands[IEEE80211_BAND_2GHZ])
++	if (!wiphy->bands[NL80211_BAND_2GHZ])
+ 		return;
+-	sband = wiphy->bands[IEEE80211_BAND_2GHZ];
++	sband = wiphy->bands[NL80211_BAND_2GHZ];
+ 
+ 	/*
+ 	 * If no country IE has been received always enable active scan
+@@ -258,10 +258,10 @@ static void _rtw_reg_apply_radar_flags(struct wiphy *wiphy)
+ 	struct ieee80211_channel *ch;
+ 	unsigned int i;
+ 
+-	if (!wiphy->bands[IEEE80211_BAND_5GHZ])
++	if (!wiphy->bands[NL80211_BAND_5GHZ])
+ 		return;
+ 
+-	sband = wiphy->bands[IEEE80211_BAND_5GHZ];
++	sband = wiphy->bands[NL80211_BAND_5GHZ];
+ 
+ 	for (i = 0; i < sband->n_channels; i++) {
+ 		ch = &sband->channels[i];
+@@ -316,7 +316,7 @@ static void _rtw_reg_apply_flags(struct wiphy *wiphy)
+ 	u32 freq;
+ 
+ 	// all channels disable
+-	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
++	for (i = 0; i < NUM_NL80211_BANDS; i++) {
+ 		sband = wiphy->bands[i];
+ 
+ 		if (sband) {
+@@ -364,7 +364,7 @@ static void _rtw_reg_apply_flags(struct wiphy *wiphy)
+ 	u16 channel;
+ 	u32 freq;
+ 
+-	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
++	for (i = 0; i < NUM_NL80211_BANDS; i++) {
+ 		sband = wiphy->bands[i];
+ 
+ 		if (sband)
+diff --git a/drivers/net/wireless/realtek/rtl8189fs/platform/platform_ARM_SUNnI_sdio.c b/drivers/net/wireless/realtek/rtl8189fs/platform/platform_ARM_SUNnI_sdio.c
+index 601e738..d9db4f0 100644
+--- a/drivers/net/wireless/realtek/rtl8189fs/platform/platform_ARM_SUNnI_sdio.c
++++ b/drivers/net/wireless/realtek/rtl8189fs/platform/platform_ARM_SUNnI_sdio.c
+@@ -25,7 +25,6 @@
+  *	CONFIG_PLATFORM_ARM_SUN8I
+  */
+ #include <drv_types.h>
+-#include <mach/sys_config.h>
+ #ifdef CONFIG_GPIO_WAKEUP
+ #include <linux/gpio.h>
+ #endif
+@@ -56,59 +55,9 @@ int platform_wifi_power_on(void)
+ {
+ 	int ret = 0;
+ 
+-#ifdef CONFIG_MMC
+-{
+-	script_item_u val;
+-	script_item_value_type_e type;
+-
+-	type = script_get_item("wifi_para", "wifi_sdc_id", &val);
+-	if (SCIRPT_ITEM_VALUE_TYPE_INT!=type) {
+-		DBG_871X("get wifi_sdc_id failed\n");
+-		ret = -1;
+-	} else {
+-		sdc_id = val.val;
+-		DBG_871X("----- %s sdc_id: %d\n", __FUNCTION__, sdc_id);
+-
+-#if defined(CONFIG_PLATFORM_ARM_SUN6I) || defined(CONFIG_PLATFORM_ARM_SUN7I)
+-		sw_mci_rescan_card(sdc_id, 1);
+-#elif defined(CONFIG_PLATFORM_ARM_SUN8I)
+-		sunxi_mci_rescan_card(sdc_id, 1);
+-#endif
+-		mdelay(100);
+-		wifi_pm_power(1);
+-
+-		DBG_871X("%s: power up, rescan card.\n", __FUNCTION__);
+-	}
+-
+-#ifdef CONFIG_GPIO_WAKEUP
+-	type = script_get_item("wifi_para", "wl_host_wake", &val);
+-	if (SCIRPT_ITEM_VALUE_TYPE_PIO != type) {
+-		DBG_871X("No definition of wake up host PIN\n");
+-		ret = -1;
+-	} else {
+-		gpio_eint_wlan = val.gpio.gpio;
+-#ifdef CONFIG_PLATFORM_ARM_SUN8I
+-		oob_irq = gpio_to_irq(gpio_eint_wlan);
+-#endif
+-	}
+-#endif // CONFIG_GPIO_WAKEUP
+-}
+-#endif // CONFIG_MMC
+-
+ 	return ret;
+ }
+ 
+ void platform_wifi_power_off(void)
+ {
+-#ifdef CONFIG_MMC
+-#if defined(CONFIG_PLATFORM_ARM_SUN6I) ||defined(CONFIG_PLATFORM_ARM_SUN7I)
+-	sw_mci_rescan_card(sdc_id, 0);
+-#elif defined(CONFIG_PLATFORM_ARM_SUN8I)
+-	sunxi_mci_rescan_card(sdc_id, 0);
+-#endif
+-	mdelay(100);
+-	wifi_pm_power(0);
+-
+-	DBG_871X("%s: remove card, power off.\n", __FUNCTION__);
+-#endif // CONFIG_MMC
+ }
+-- 
+1.9.1
+

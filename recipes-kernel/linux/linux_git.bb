@@ -22,7 +22,15 @@ KERNEL_EXTRA_ARGS += "LOADADDR=${UBOOT_ENTRYPOINT}"
 PV = "4.7.7+git${SRCPV}"
 SRCREV_pn-${PN} = "92d21ac74a9e3c09b0b01c764e530657e4c85c49"
 
-SRC_URI = "git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git;protocol=git;branch=master \
+SRC_URI = "\
+        git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git;protocol=git;branch=master \
         file://defconfig \
         "
+
+SRC_URI_append_orangepi-lite += "\
+        file://0001-wireless-realtek-Add-rtl8189fs-version-4.3.24.patch \
+        file://0002-wireless-realtek-rtl8189fs-Update-for-kernel-4.7.patch \
+        file://0003-ARM-dts-sun8i-Add-rtl8189fs-node.patch \
+        "
+
 S = "${WORKDIR}/git"
