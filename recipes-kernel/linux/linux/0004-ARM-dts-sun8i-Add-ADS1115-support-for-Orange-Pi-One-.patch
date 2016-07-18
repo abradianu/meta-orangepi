@@ -1,0 +1,88 @@
+From a9c124db948aae9536694538d4ed1793ad7f0d87 Mon Sep 17 00:00:00 2001
+From: Adrian Bradianu <abradianu@gmail.com>
+Date: Mon, 18 Jul 2016 20:47:17 +0300
+Subject: [PATCH] ARM: dts: sun8i: Add ADS1115 support for Orange Pi One/Lite
+
+Add i2c0 and ADS1115 support for Orange Pi One/Lite. Add i2c1 node but let
+it disabled for now.
+
+Signed-off-by: Adrian Bradianu <abradianu@gmail.com>
+---
+ arch/arm/boot/dts/sun8i-h3-orangepi-one.dts | 54 +++++++++++++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/arch/arm/boot/dts/sun8i-h3-orangepi-one.dts b/arch/arm/boot/dts/sun8i-h3-orangepi-one.dts
+index a42bc61..319f25f 100644
+--- a/arch/arm/boot/dts/sun8i-h3-orangepi-one.dts
++++ b/arch/arm/boot/dts/sun8i-h3-orangepi-one.dts
+@@ -88,6 +88,46 @@
+ 			gpios = <&r_pio 0 3 GPIO_ACTIVE_LOW>;
+ 		};
+ 	};
++
++	soc {
++		i2c0: i2c@01c2ac00 {
++			compatible = "allwinner,sun6i-a31-i2c";
++			reg = <0x01c2ac00 0x400>;
++			interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&bus_gates 96>;
++			resets = <&apb2_rst 0>;
++			status = "okay";
++			#address-cells = <1>;
++			#size-cells = <0>;
++			pinctrl-names = "default";
++			pinctrl-0 = <&i2c0_pins_a>;
++			ads1015: ads1015@48 {
++				compatible = "ti,ads1015";
++				status = "okay";
++				#address-cells = <1>;
++				#size-cells = <0>;
++				reg = <0x48>;
++				channel@1 {
++					reg = <4>;
++					ti,gain = <2>;
++					ti,datarate = <2>;
++				};
++			};
++		};
++
++		i2c1: i2c@01c2b000 {
++			compatible = "allwinner,sun6i-a31-i2c";
++			reg = <0x01c2b000 0x400>;
++			interrupts = <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&bus_gates 97>;
++			resets = <&apb2_rst 1>;
++			status = "disabled";
++			#address-cells = <1>;
++			#size-cells = <0>;
++			pinctrl-names = "default";
++			pinctrl-0 = <&i2c1_pins_a>;
++		};
++	};
+ };
+ 
+ &ehci1 {
+@@ -129,6 +169,20 @@
+ 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+ 		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+ 	};
++
++	i2c0_pins_a: i2c0@0 {
++		allwinner,pins = "PA11", "PA12";
++		allwinner,function = "i2c0";
++		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
++		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
++	};
++
++	i2c1_pins_a: i2c1@0 {
++		allwinner,pins = "PA18", "PA19";
++		allwinner,function = "i2c1";
++		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
++		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
++	};
+ };
+ 
+ &r_pio {
+-- 
+1.9.1
+

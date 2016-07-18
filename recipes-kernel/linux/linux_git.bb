@@ -31,6 +31,7 @@ SRC_URI_append_orangepi-lite += "\
         file://0001-wireless-realtek-Add-rtl8189fs-version-4.3.24.patch \
         file://0002-wireless-realtek-rtl8189fs-Update-for-kernel-4.7.patch \
         file://0003-ARM-dts-sun8i-Add-rtl8189fs-node.patch \
+        file://0004-ARM-dts-sun8i-Add-ADS1115-support-for-Orange-Pi-One-.patch \
         "
 
 S = "${WORKDIR}/git"
