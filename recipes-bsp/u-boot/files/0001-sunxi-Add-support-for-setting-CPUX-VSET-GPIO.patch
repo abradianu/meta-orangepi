@@ -1,0 +1,53 @@
+From 0c0c412ffc6db5a93dbfa001a8b66fd9188c036a Mon Sep 17 00:00:00 2001
+From: Adrian Bradianu <abradianu@gmail.com>
+Date: Tue, 26 Jul 2016 23:04:54 +0300
+Subject: [PATCH 1/2] sunxi: Add support for setting CPUX-VSET GPIO
+
+On Orange Pi One/Lite CPU voltage can be adjusted through CPUX-VSET GPIO.
+Add support for setting CPU voltage to 1.1V. CONFIG_SYS_CLK_FREQ must
+be set accordingly.
+
+Signed-off-by: Adrian Bradianu <abradianu@gmail.com>
+---
+ board/sunxi/board.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/board/sunxi/board.c b/board/sunxi/board.c
+index 3cf3614..2beb14b 100644
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -29,6 +29,9 @@
+ #include <nand.h>
+ #include <net.h>
+ #include <sy8106a.h>
++#if defined(CONFIG_CPUX_VSET_GPIO_LOW)
++#include <asm/arch-sunxi/prcm.h>
++#endif
+ 
+ #if defined CONFIG_VIDEO_LCD_PANEL_I2C && !(defined CONFIG_SPL_BUILD)
+ /* So that we can use pin names in Kconfig and sunxi_name_to_gpio() */
+@@ -525,6 +528,21 @@ void sunxi_board_init(void)
+ 	power_failed |= axp_set_fldo(3, CONFIG_AXP_FLDO3_VOLT);
+ #endif
+ #endif
++
++#if defined(CONFIG_CPUX_VSET_GPIO_LOW)
++	/*
++	 * On Orange Pi One/Lite CPU voltage can be adjusted through
++	 * CPUX-VSET GPIO (GPL6)
++	 */
++
++	prcm_apb0_enable(PRCM_APB0_GATE_PIO);
++
++	/* Set CPU voltage to 1.1 V */
++	gpio_direction_output(SUNXI_GPL(6), 0);
++	printf("System clock %dMHz, CPU voltage 1.1V\n",
++		CONFIG_SYS_CLK_FREQ/1000000);
++#endif
++
+ 	printf("DRAM:");
+ 	ramsize = sunxi_dram_init();
+ 	printf(" %lu MiB\n", ramsize >> 20);
+-- 
+1.9.1
+

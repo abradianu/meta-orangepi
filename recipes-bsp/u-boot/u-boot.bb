@@ -27,6 +27,8 @@ DEFAULT_PREFERENCE_sun7i="1"
 DEFAULT_PREFERENCE_sun8i="1"
 
 SRC_URI = "git://git.denx.de/u-boot.git;branch=master \
+           file://0001-sunxi-Add-support-for-setting-CPUX-VSET-GPIO.patch \
+           file://0002-sunxi-Set-CPUX-VSET-GPIO-to-low.patch \
            file://boot.cmd"
 
 SRCREV = "4b6e1fda107e5244e80ebc41865650ac2873dc88"
